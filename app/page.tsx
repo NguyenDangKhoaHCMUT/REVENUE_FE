@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { exportDashboardPng, revenueExportFilename } from '@/lib/export-dashboard';
+import { calculateRevenueStats } from '@/lib/revenue-stats';
 
 export default function DashboardPage() {
   const { metrics, isLoadingData, dataError, refreshData } = useData();
@@ -25,46 +26,10 @@ export default function DashboardPage() {
   const [isExporting, setIsExporting] = useState(false);
 
   // Calculations
-  const stats = useMemo(() => {
-    const totalPos = metrics.reduce((acc, m) => acc + (showPos ? m.posRevenue : 0), 0);
-    const totalEatclub = metrics.reduce(
-      (acc, m) => acc + (showEatclub ? m.eatclubRevenue : 0),
-      0
-    );
-    const totalRevenue = totalPos + totalEatclub;
-    const avgPerDay = Math.round(totalRevenue / 7);
-    const totalCovers = metrics.reduce((acc, m) => acc + m.covers, 0);
-
-    // Previous period stats
-    const prevTotalRevenue = metrics.reduce(
-      (acc, m) => acc + m.previousTotalRevenue,
-      0
-    );
-    const prevAvgPerDay = Math.round(prevTotalRevenue / 7);
-    const prevTotalCovers = metrics.reduce((acc, m) => acc + m.previousCovers, 0);
-
-    const revDiffPct = prevTotalRevenue
-      ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100
-      : 0;
-    const avgDiffPct = prevAvgPerDay
-      ? ((avgPerDay - prevAvgPerDay) / prevAvgPerDay) * 100
-      : 0;
-    const coversDiffPct = prevTotalCovers
-      ? ((totalCovers - prevTotalCovers) / prevTotalCovers) * 100
-      : 0;
-
-    return {
-      totalRevenue,
-      avgPerDay,
-      totalCovers,
-      prevTotalRevenue,
-      prevAvgPerDay,
-      prevTotalCovers,
-      revDiffPct: revDiffPct.toFixed(1),
-      avgDiffPct: avgDiffPct.toFixed(1),
-      coversDiffPct: coversDiffPct.toFixed(1),
-    };
-  }, [metrics, showPos, showEatclub]);
+  const stats = useMemo(
+    () => calculateRevenueStats(metrics, { showPos, showEatclub }),
+    [metrics, showPos, showEatclub],
+  );
 
   const handleExportPNG = async () => {
     if (!dashboardRef.current || exportInProgress.current) return;

@@ -1,11 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  DailyMetric,
-  DailyMetricData,
-  MetricPayloadField,
-} from '@/types/metrics';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import type { DailyMetricData } from '@/types/metrics';
 import { AdminUser } from '@/types/auth';
 import { authService } from '@/services/auth.service';
 import { metricsService, buildEmptyWeekMetrics } from '@/services/metrics.service';
@@ -14,6 +10,8 @@ import { eventsService } from '@/services/events.service';
 import { toast } from 'react-toastify';
 import { buildPeriodMetrics, mergePeriodMetrics, type MetricPeriod } from '@/lib/metric-period';
 import { buildEventBatch, mergeEventBatch } from '@/lib/event-batch';
+import { dashboardService } from '@/services/dashboard.service';
+import { mergeDashboardData } from '@/lib/dashboard-data';
 
 interface DataContextType {
   metrics: DailyMetricData[];
@@ -22,6 +20,7 @@ interface DataContextType {
   saveMetricsPeriod: (data: DailyMetricData[], period: MetricPeriod) => Promise<{ success: boolean; error?: string }>;
   refreshData: () => Promise<void>;
   isLoadingData: boolean;
+  dataError: string | null;
   user: AdminUser | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -30,109 +29,71 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const PAYLOAD_FIELDS: MetricPayloadField[] = [
-  'posRevenue',
-  'eatclubRevenue',
-  'labourCost',
-  'covers',
-];
-
-/** Fields of a stored record that are null (empty) */
-function blankFields(metric?: DailyMetric): MetricPayloadField[] {
-  if (!metric) return [];
-  return PAYLOAD_FIELDS.filter((f) => metric[f] === null || metric[f] === undefined);
-}
-
 export function DataProvider({ children }: { children: React.ReactNode }) {
   // Date-free placeholder so SSR/prerender and first client render match.
-  // The real current week (+ cached values) is loaded on mount below.
+  // The real current week is read from the public API on mount below.
   const [metrics, setMetrics] = useState<DailyMetricData[]>(() =>
     buildEmptyWeekMetrics()
   );
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMetrics(metricsService.getInitialMetrics());
-  }, []);
   const [user, setUser] = useState<AdminUser | null>(() =>
     authService.getStoredUser()
   );
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const latestRead = useRef(0);
 
-  const refreshData = async (tokenOverride?: string) => {
-    const token = tokenOverride || user?.token;
-    if (!token) return;
-
-    try {
-      setIsLoadingData(true);
-      const { current, previous } = getWeekRanges();
-      const [remoteMetrics, remoteEvents] = await Promise.all([
-        // Previous + current week in a single request
-        metricsService
-          .getMetrics({ from: previous.from, to: current.to }, token)
-          .catch(() => []),
-        eventsService
-          .getEvents({ from: current.from, to: current.to }, token)
-          .catch(() => []),
-      ]);
-
-      setMetrics(() => {
-        const base = buildEmptyWeekMetrics(new Date());
-        const updated = base.map((item, idx) => {
-          const matchMetric = remoteMetrics.find((m) => m.date === item.dateStr);
-          const matchEvent = remoteEvents.find((e) => e.date === item.dateStr);
-          const prevMetric = remoteMetrics.find(
-            (m) => m.date === previous.dates[idx]
-          );
-          const prevPos = prevMetric ? Number(prevMetric.posRevenue) : 0;
-          const prevEatclub = prevMetric ? Number(prevMetric.eatclubRevenue) : 0;
-
-          return {
-            ...item,
-            posRevenue:
-              matchMetric !== undefined ? Number(matchMetric.posRevenue) : 0,
-            eatclubRevenue:
-              matchMetric !== undefined
-                ? Number(matchMetric.eatclubRevenue)
-                : 0,
-            labourCost:
-              matchMetric !== undefined ? Number(matchMetric.labourCost) : 0,
-            covers: matchMetric !== undefined ? Number(matchMetric.covers) : 0,
-            previousDirectRevenue: prevPos,
-            previousTotalRevenue: prevPos + prevEatclub,
-            previousLabourCost: prevMetric ? Number(prevMetric.labourCost) : 0,
-            previousCovers: prevMetric ? Number(prevMetric.covers) : 0,
-            hasCurrentData: matchMetric !== undefined,
-            hasPreviousData: prevMetric !== undefined,
-            blankCurrent: blankFields(matchMetric),
-            blankPrevious: blankFields(prevMetric),
-            eventImpact: matchEvent ? matchEvent.impact : null,
-            eventDescription: matchEvent?.description ?? undefined,
-            eventId: matchEvent ? matchEvent.id : undefined,
-          };
-        });
-
+  const loadData = useCallback(() => {
+    const requestId = ++latestRead.current;
+    const now = new Date();
+    const { current, previous } = getWeekRanges(now);
+    return dashboardService.getDashboard(current.from)
+      .then((response) => {
+        if (requestId !== latestRead.current) return;
+        const updated = mergeDashboardData(buildEmptyWeekMetrics(now), previous.dates, response);
+        setMetrics(updated);
+        setDataError(null);
         metricsService.saveMetrics(updated);
-        return updated;
+      })
+      .catch((err: unknown) => {
+        if (requestId === latestRead.current) {
+          setDataError(err instanceof Error ? err.message : 'Unable to load dashboard data');
+        }
+      })
+      .finally(() => {
+        if (requestId === latestRead.current) setIsLoadingData(false);
       });
-    } catch {
-      // keep current state
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
+  }, []);
 
-  const logout = () => {
+  const refreshData = useCallback(async () => {
+    setIsLoadingData(true);
+    setDataError(null);
+    await loadData();
+  }, [loadData]);
+
+  const cancelPendingReads = useCallback(() => { latestRead.current++; }, []);
+
+  // Public data always loads on mount, even in a clean/anonymous browser.
+  useEffect(() => {
+    // Initial state is already loading; all state updates here follow the API response.
+    void loadData();
+    return cancelPendingReads;
+  }, [loadData, cancelPendingReads]);
+
+  const logout = useCallback(() => {
     authService.clearStoredUser();
     setUser(null);
-  };
+  }, []);
 
-  // Validate session against backend /auth/me and load remote data on mount
+  // Validate a cached admin session independently of the public dashboard read.
   useEffect(() => {
-    if (!user?.token) return;
+    const storedUser = authService.getStoredUser();
+    if (!storedUser?.token) return;
+    let cancelled = false;
 
     authService
-      .getMe(user.token)
+      .getMe(storedUser.token)
       .then((meData) => {
+        if (cancelled) return;
         setUser((prev: AdminUser | null) =>
           prev
             ? {
@@ -143,9 +104,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               }
             : null
         );
-        refreshData(user.token);
       })
       .catch((err) => {
+        if (cancelled) return;
         // If unauthorized (401), clear invalid token
         if (err && typeof err === 'object' && 'statusCode' in err && err.statusCode === 401) {
           logout();
@@ -154,7 +115,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           });
         }
       });
-  }, []);
+    return () => { cancelled = true; };
+  }, [logout]);
 
   const updateMetric = (id: string, updated: Partial<DailyMetricData>) => {
     setMetrics((prev) => {
@@ -167,6 +129,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const saveMetricsPeriod = async (data: DailyMetricData[], period: MetricPeriod) => {
     const token = user?.token;
     if (!token) return { success: false, error: 'Unauthorized: Please log in again.' };
+    if (isLoadingData || dataError) return { success: false, error: 'Please load the latest data before saving.' };
     try {
       const previousDates = getWeekRanges().previous.dates;
       const payload = buildPeriodMetrics(data, period, previousDates);
@@ -189,6 +152,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!token) {
       return { success: false, error: 'Unauthorized: Please log in again.' };
     }
+    if (isLoadingData || dataError) return { success: false, error: 'Please load the latest data before saving.' };
 
     try {
       const payload = buildEventBatch(data);
@@ -222,7 +186,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       });
       setUser(adminUser);
       // Fetch data after successful login
-      refreshData(adminUser.token);
+      void refreshData();
       return { success: true };
     } catch (err: unknown) {
       const message =
@@ -240,6 +204,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         saveMetricsPeriod,
         refreshData,
         isLoadingData,
+        dataError,
         user,
         login,
         logout,

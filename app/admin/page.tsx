@@ -72,6 +72,9 @@ export default function AdminPage() {
     saveEvents,
     saveMetricsPeriod,
     isAuthenticated,
+    isLoadingData,
+    dataError,
+    refreshData,
   } = useData();
   const isClient = useIsClient();
 
@@ -240,6 +243,13 @@ export default function AdminPage() {
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+        {isLoadingData && <p role="status" className="text-sm text-neutral-600">Loading the latest data…</p>}
+        {dataError && !isLoadingData && (
+          <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            Unable to load the latest data. Load it successfully before saving.
+            <button type="button" onClick={() => void refreshData()} className="ml-3 font-semibold underline cursor-pointer">Retry</button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex items-center gap-2 border-b border-neutral-200 pb-2">
@@ -448,7 +458,7 @@ export default function AdminPage() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isLoadingData || !!dataError}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-neutral-900 hover:bg-neutral-800 text-white transition-colors shadow-xs cursor-pointer disabled:opacity-60"
           >
             {isSaving ? (

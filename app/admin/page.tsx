@@ -70,6 +70,7 @@ export default function AdminPage() {
   const {
     metrics,
     saveAllMetricsAndEvents,
+    saveMetricsPeriod,
     isAuthenticated,
   } = useData();
   const isClient = useIsClient();
@@ -89,8 +90,22 @@ export default function AdminPage() {
   // Sync if metrics change externally (e.g. after refreshData or initial load)
   if (metrics !== prevMetrics) {
     setPrevMetrics(metrics);
-    setFormData(metrics);
-    setFields(buildFields(metrics));
+    // A period save must not discard edits in the other tabs.
+    setFormData((draft) => metrics.map((row) => {
+      const before = prevMetrics.find((item) => item.id === row.id);
+      const edited = draft.find((item) => item.id === row.id);
+      if (!before || !edited) return row;
+      return { ...row,
+        eventImpact: edited.eventImpact !== before.eventImpact ? edited.eventImpact : row.eventImpact,
+        eventDescription: edited.eventDescription !== before.eventDescription ? edited.eventDescription : row.eventDescription,
+      };
+    }));
+    setFields((draft) => {
+      const before = buildFields(prevMetrics);
+      const after = buildFields(metrics);
+      return Object.fromEntries(Object.entries(after).map(([key, value]) =>
+        [key, draft[key] !== before[key] ? draft[key] : value]));
+    });
   }
 
   const handleField = (id: string, field: FieldKey, value: string) => {
@@ -110,7 +125,7 @@ export default function AdminPage() {
             [field]:
               typeof value === 'string' &&
               !isNaN(Number(value)) &&
-              field !== 'eventTitle' &&
+              field !== 'eventDescription' &&
               field !== 'eventImpact' &&
               field !== 'day' &&
               field !== 'id' &&
@@ -151,7 +166,9 @@ export default function AdminPage() {
     });
 
     try {
-      const res = await saveAllMetricsAndEvents(data);
+      const res = activeTab === 'events'
+        ? await saveAllMetricsAndEvents(data)
+        : await saveMetricsPeriod(data, activeTab);
       if (res.success) {
         toast.success('Saved successfully!');
       } else {
@@ -407,13 +424,13 @@ export default function AdminPage() {
                   {row.eventImpact !== null && (
                     <div>
                       <label className="block text-xs text-neutral-500 mb-1">
-                        Event Title / Headline:
+                        Event Description:
                       </label>
-                      <input
-                        type="text"
-                        value={row.eventTitle || ''}
+                      <textarea
+                        rows={3}
+                        value={row.eventDescription || ''}
                         onChange={(e) =>
-                          handleChange(row.id, 'eventTitle', e.target.value)
+                          handleChange(row.id, 'eventDescription', e.target.value)
                         }
                         placeholder="e.g. Music Festival, Heavy rain storm..."
                         className="w-full px-3 py-1.5 rounded-lg border border-neutral-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900"

@@ -12,11 +12,13 @@ import { metricsService, buildEmptyWeekMetrics } from '@/services/metrics.servic
 import { getWeekRanges } from '@/lib/utils';
 import { eventsService } from '@/services/events.service';
 import { toast } from 'react-toastify';
+import { buildPeriodMetrics, mergePeriodMetrics, type MetricPeriod } from '@/lib/metric-period';
 
 interface DataContextType {
   metrics: DailyMetricData[];
   updateMetric: (id: string, updated: Partial<DailyMetricData>) => void;
   saveAllMetricsAndEvents: (data: DailyMetricData[]) => Promise<{ success: boolean; error?: string }>;
+  saveMetricsPeriod: (data: DailyMetricData[], period: MetricPeriod) => Promise<{ success: boolean; error?: string }>;
   refreshData: () => Promise<void>;
   isLoadingData: boolean;
   user: AdminUser | null;
@@ -107,7 +109,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             blankCurrent: blankFields(matchMetric),
             blankPrevious: blankFields(prevMetric),
             eventImpact: matchEvent ? matchEvent.impact : null,
-            eventTitle: matchEvent ? matchEvent.title : undefined,
+            eventDescription: matchEvent?.description ?? undefined,
             eventId: matchEvent ? matchEvent.id : undefined,
           };
         });
@@ -163,6 +165,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       metricsService.saveMetrics(next);
       return next;
     });
+  };
+
+  const saveMetricsPeriod = async (data: DailyMetricData[], period: MetricPeriod) => {
+    const token = user?.token;
+    if (!token) return { success: false, error: 'Unauthorized: Please log in again.' };
+    try {
+      const previousDates = getWeekRanges().previous.dates;
+      const payload = buildPeriodMetrics(data, period, previousDates);
+      await metricsService.upsertPeriod(payload, token);
+      setMetrics((existing) => {
+        const updated = mergePeriodMetrics(existing, payload, period, previousDates);
+        metricsService.saveMetrics(updated);
+        return updated;
+      });
+      return { success: true };
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to save metrics' };
+    }
   };
 
   const saveAllMetricsAndEvents = async (
@@ -241,7 +261,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               item.eventId,
               {
                 impact: item.eventImpact,
-                title: item.eventTitle?.trim() || 'Event',
+                description: item.eventDescription?.trim() || '',
               },
               token
             );
@@ -250,7 +270,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               {
                 date: item.dateStr,
                 impact: item.eventImpact,
-                title: item.eventTitle?.trim() || 'Event',
+                description: item.eventDescription?.trim() || '',
               },
               token
             );
@@ -264,7 +284,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           updatedList[i] = {
             ...item,
             eventId: undefined,
-            eventTitle: undefined,
+            eventDescription: undefined,
           };
         }
       }
@@ -310,6 +330,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         metrics,
         updateMetric,
         saveAllMetricsAndEvents,
+        saveMetricsPeriod,
         refreshData,
         isLoadingData,
         user,

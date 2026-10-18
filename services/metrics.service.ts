@@ -5,6 +5,7 @@ import {
   UpsertDailyMetricPayload,
 } from '@/types';
 import { getWeekRanges } from '@/lib/utils';
+import type { PeriodMetricPayload } from '@/lib/metric-period';
 
 const STORAGE_KEY = 'metrics';
 
@@ -43,6 +44,14 @@ export function buildEmptyWeekMetrics(now?: Date): DailyMetricData[] {
 }
 
 export const metricsService = {
+  async upsertPeriod(metrics: PeriodMetricPayload[], token: string): Promise<{ success: true }> {
+    return apiClient<{ success: true }>('/admin/metrics', {
+      method: 'PUT',
+      token,
+      body: JSON.stringify({ metrics }),
+    });
+  },
+
   /**
    * Fetch metrics from backend API
    */
@@ -100,7 +109,13 @@ export const metricsService = {
         const sameWeek =
           parsed.length === 7 &&
           parsed.every((item, idx) => item.dateStr === empty[idx].dateStr);
-        if (sameWeek) return parsed;
+        if (sameWeek) {
+          // Upgrade browser caches created before events switched to description.
+          return parsed.map((row: DailyMetricData & { eventTitle?: string }) => {
+            const { eventTitle, ...metric } = row;
+            return { ...metric, eventDescription: metric.eventDescription ?? eventTitle };
+          });
+        }
       }
       return empty;
     } catch {

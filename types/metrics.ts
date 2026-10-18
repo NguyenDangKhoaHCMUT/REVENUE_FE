@@ -44,6 +44,6 @@ export interface DailyMetricData {
   blankPrevious?: MetricPayloadField[];
   // Event Impact
   eventImpact: EventImpactType | null;
-  eventTitle?: string;
+  eventDescription?: string;
   eventId?: string;
 }

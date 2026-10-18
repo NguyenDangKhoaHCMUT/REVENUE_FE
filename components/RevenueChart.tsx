@@ -98,7 +98,7 @@ export function RevenueChart({
                         bottom: `${Math.max(posPct + eatclubPct, labourPct) + 5}%`,
                       }}
                       className="absolute z-10 flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-rose-50 border border-rose-200 text-rose-500 shadow-xs cursor-pointer transition-transform hover:scale-110 pointer-events-auto"
-                      title={day.eventTitle || 'Negative Event Impact'}
+                      title={day.eventDescription || 'Negative Event Impact'}
                     >
                       <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
                     </div>
@@ -110,7 +110,7 @@ export function RevenueChart({
                         bottom: `${Math.max(posPct + eatclubPct, labourPct) + 5}%`,
                       }}
                       className="absolute z-10 flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-500 shadow-xs cursor-pointer transition-transform hover:scale-110 pointer-events-auto"
-                      title={day.eventTitle || 'Positive Event Impact'}
+                      title={day.eventDescription || 'Positive Event Impact'}
                     >
                       <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
                     </div>
@@ -300,11 +300,11 @@ export function RevenueChart({
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-[#9CA3AF]" />
-              <span>Direct Revenue (Previous)</span>
+              <span>POS Revenue (Previous)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-[#A5B4FC]" />
-              <span>Total Revenue (Previous)</span>
+              <span>Eatclub Revenue (Previous)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-[#FED7AA]" />

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { DataProvider } from "@/context/DataContext";
+import { ToastProvider } from "@/components/ToastProvider";
+import "react-toastify/dist/ReactToastify.css";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,6 +32,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[#F9FAFB] text-neutral-900" suppressHydrationWarning>
         <DataProvider>{children}</DataProvider>
+        <ToastProvider />
       </body>
     </html>
   );

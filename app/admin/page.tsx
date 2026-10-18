@@ -10,15 +10,14 @@ import {
   MetricPayloadField,
 } from '@/types/metrics';
 import { useIsClient, getWeekRanges } from '@/lib/utils';
+import { toast } from 'react-toastify';
 import {
   Save,
   ShieldAlert,
-  CheckCircle2,
   Calendar,
   Layers,
   TrendingUp,
   TrendingDown,
-  AlertCircle,
 } from 'lucide-react';
 
 type FieldKey =
@@ -86,8 +85,6 @@ export default function AdminPage() {
     'current'
   );
   const [isSaving, setIsSaving] = useState(false);
-  const [savedNotice, setSavedNotice] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Sync if metrics change externally (e.g. after refreshData or initial load)
   if (metrics !== prevMetrics) {
@@ -130,8 +127,6 @@ export default function AdminPage() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    setSaveError(null);
-    setSavedNotice(false);
 
     // Build the payload from the string fields: blank = no data, 0 = real zero
     const data: DailyMetricData[] = formData.map((row) => {
@@ -155,14 +150,17 @@ export default function AdminPage() {
       };
     });
 
-    const res = await saveAllMetricsAndEvents(data);
-    setIsSaving(false);
-
-    if (res.success) {
-      setSavedNotice(true);
-      setTimeout(() => setSavedNotice(false), 4000);
-    } else {
-      setSaveError(res.error || 'Failed to save changes to the backend');
+    try {
+      const res = await saveAllMetricsAndEvents(data);
+      if (res.success) {
+        toast.success('Saved successfully!');
+      } else {
+        toast.error(res.error || 'Failed!');
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed!');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -225,24 +223,6 @@ export default function AdminPage() {
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
-
-        {/* Success toast */}
-        {savedNotice && (
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-sm text-emerald-800 shadow-xs animate-in fade-in">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span>
-              All metrics and events have been successfully saved to the backend database via REST API!
-            </span>
-          </div>
-        )}
-
-        {/* Error toast */}
-        {saveError && (
-          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-sm text-rose-800 shadow-xs animate-in fade-in">
-            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-            <span>{saveError}</span>
-          </div>
-        )}
 
         {/* Tabs */}
         <div className="flex items-center gap-2 border-b border-neutral-200 pb-2">

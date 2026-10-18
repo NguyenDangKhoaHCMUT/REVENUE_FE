@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useData } from '@/context/DataContext';
 import { useIsClient } from '@/lib/utils';
 import { LayoutDashboard, Lock, Settings, LogOut } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -68,7 +69,10 @@ export function Navbar() {
               </Link>
 
               <button
-                onClick={logout}
+                onClick={() => {
+                  logout();
+                  toast.success('Signed out successfully.');
+                }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors ml-1 cursor-pointer"
                 title={`Logged in as ${user?.name}`}
               >

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { metrics } = useData();
+  const { metrics, isLoadingData, dataError, refreshData } = useData();
 
   // Mode toggles
   const [isCompareMode, setIsCompareMode] = useState(false);
@@ -63,6 +63,28 @@ export default function DashboardPage() {
   const handleExportPNG = () => {
     window.print();
   };
+
+  if (isLoadingData || dataError) {
+    return (
+      <div className="min-h-screen bg-[#F4F5F7] flex flex-col">
+        <Navbar />
+        <main className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-8 text-center">
+            {isLoadingData ? (
+              <p role="status" className="text-sm text-neutral-600">Loading dashboard data…</p>
+            ) : (
+              <div role="alert">
+                <p className="text-sm text-rose-700">Unable to load dashboard data. Please try again.</p>
+                <button type="button" onClick={() => void refreshData()} className="mt-4 rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white cursor-pointer">
+                  Retry
+                </button>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F4F5F7] flex flex-col">

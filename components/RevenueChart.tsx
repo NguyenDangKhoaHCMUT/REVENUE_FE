@@ -50,7 +50,7 @@ export function RevenueChart({
         </div>
 
         {/* Chart Grid & Columns Area */}
-        <div className="relative flex-1 h-full">
+        <div className="relative flex-1 min-w-0 h-full">
           {/* Horizontal Grid lines */}
           <div className="absolute inset-0 pointer-events-none">
             {yAxisTicks.map((tick) => (
@@ -152,7 +152,7 @@ export function RevenueChart({
                   {/* Bars Container */}
                   <div className="w-full flex items-end justify-center gap-1 sm:gap-1.5 md:gap-2 h-full">
                     {/* --- Group 1: Current Period --- */}
-                    <div className="flex items-end gap-0.5 sm:gap-1 h-full">
+                    <div className="flex min-w-0 items-end gap-0.5 sm:gap-1 h-full">
                       {/* Current Stacked Revenue Bar */}
                       {(showPos || showEatclub) && (
                         <div
@@ -203,7 +203,7 @@ export function RevenueChart({
 
                     {/* --- Group 2: Previous Period (Compare Mode Only) --- */}
                     {isCompareMode && (
-                      <div className="flex items-end gap-0.5 sm:gap-1 h-full">
+                      <div className="flex min-w-0 items-end gap-0.5 sm:gap-1 h-full">
                         {/* Previous Stacked Revenue Bar */}
                         {(showPos || showEatclub) && (
                           <div

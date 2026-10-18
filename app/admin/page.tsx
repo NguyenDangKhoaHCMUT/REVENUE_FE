@@ -69,7 +69,7 @@ export default function AdminPage() {
   const router = useRouter();
   const {
     metrics,
-    saveAllMetricsAndEvents,
+    saveEvents,
     saveMetricsPeriod,
     isAuthenticated,
   } = useData();
@@ -167,7 +167,7 @@ export default function AdminPage() {
 
     try {
       const res = activeTab === 'events'
-        ? await saveAllMetricsAndEvents(data)
+        ? await saveEvents(data)
         : await saveMetricsPeriod(data, activeTab);
       if (res.success) {
         toast.success('Saved successfully!');

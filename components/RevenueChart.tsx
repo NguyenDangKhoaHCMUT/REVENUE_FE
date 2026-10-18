@@ -2,6 +2,8 @@
 
 import { DailyMetricData } from '@/types/metrics';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { useId, useState } from 'react';
+import { RevenueTooltip } from './RevenueTooltip';
 
 interface RevenueChartProps {
   metrics: DailyMetricData[];
@@ -18,6 +20,9 @@ export function RevenueChart({
   showEatclub,
   showLabour,
 }: RevenueChartProps) {
+  const tooltipId = useId();
+  const [active, setActive] = useState<{ id: string; anchor: HTMLElement; touch: boolean } | null>(null);
+  const activeDay = active ? metrics.find((day) => day.id === active.id) : undefined;
   const maxScale = 3000;
   const yAxisTicks = [
     { label: '3k', pct: 100 },
@@ -89,7 +94,35 @@ export function RevenueChart({
               return (
                 <div
                   key={day.id}
-                  className="flex-1 flex flex-col items-center h-full justify-end group relative px-0.5 sm:px-1"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${day.day}${day.dateStr ? ` ${day.dateStr}` : ''} revenue details`}
+                  aria-describedby={active?.id === day.id ? tooltipId : undefined}
+                  aria-expanded={active?.id === day.id}
+                  className="min-w-0 flex-1 flex flex-col items-center h-full justify-end relative px-0.5 sm:px-1 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                  onPointerEnter={(event) => {
+                    if (event.pointerType === 'mouse') setActive({ id: day.id, anchor: event.currentTarget, touch: false });
+                  }}
+                  onPointerLeave={(event) => {
+                    if (event.pointerType === 'mouse') setActive((current) => current?.id === day.id ? null : current);
+                  }}
+                  onPointerUp={(event) => {
+                    if (event.pointerType !== 'mouse') {
+                      const anchor = event.currentTarget;
+                      setActive((current) => current?.id === day.id ? null : { id: day.id, anchor, touch: true });
+                    }
+                  }}
+                  onFocus={(event) => {
+                    if (event.currentTarget.matches(':focus-visible')) setActive({ id: day.id, anchor: event.currentTarget, touch: false });
+                  }}
+                  onBlur={() => setActive((current) => current?.id === day.id ? null : current)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      const anchor = event.currentTarget;
+                      setActive((current) => current?.id === day.id ? null : { id: day.id, anchor, touch: false });
+                    }
+                  }}
                 >
                   {/* Event Impact Badges */}
                   {day.eventImpact === 'negative' && (
@@ -115,37 +148,6 @@ export function RevenueChart({
                       <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
                     </div>
                   )}
-
-                  {/* Tooltip on hover */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-[90%] mb-2 z-30 pointer-events-none bg-neutral-900/95 backdrop-blur-xs text-white text-[11px] rounded-xl py-2 px-3 shadow-xl whitespace-nowrap">
-                    <p className="font-bold text-neutral-100 mb-1 border-b border-neutral-700/60 pb-0.5">
-                      {day.day}
-                    </p>
-                    <p className="text-neutral-300 flex justify-between gap-3">
-                      <span>POS Revenue:</span>
-                      <strong className="text-white">${day.posRevenue.toLocaleString()}</strong>
-                    </p>
-                    <p className="text-indigo-300 flex justify-between gap-3">
-                      <span>Eatclub Revenue:</span>
-                      <strong className="text-white">${day.eatclubRevenue.toLocaleString()}</strong>
-                    </p>
-                    <p className="text-amber-300 flex justify-between gap-3">
-                      <span>Labour Costs:</span>
-                      <strong className="text-white">${day.labourCost.toLocaleString()}</strong>
-                    </p>
-                    {isCompareMode && (
-                      <div className="border-t border-neutral-700/60 mt-1 pt-1 text-neutral-400">
-                        <p className="flex justify-between gap-3">
-                          <span>Prev Total:</span>
-                          <span className="text-neutral-200">${day.previousTotalRevenue.toLocaleString()}</span>
-                        </p>
-                        <p className="flex justify-between gap-3">
-                          <span>Prev Labour:</span>
-                          <span className="text-neutral-200">${day.previousLabourCost.toLocaleString()}</span>
-                        </p>
-                      </div>
-                    )}
-                  </div>
 
                   {/* Bars Container */}
                   <div className="w-full flex items-end justify-center gap-1 sm:gap-1.5 md:gap-2 h-full">
@@ -266,6 +268,17 @@ export function RevenueChart({
           </div>
         ))}
       </div>
+
+      {active && activeDay && (
+        <RevenueTooltip
+          id={tooltipId}
+          day={activeDay}
+          anchor={active.anchor}
+          isCompareMode={isCompareMode}
+          touch={active.touch}
+          onClose={() => setActive(null)}
+        />
+      )}
 
       {/* Legend */}
       <div className="mt-8 pt-4 border-t border-neutral-100 flex flex-wrap items-center justify-center gap-x-5 sm:gap-x-7 gap-y-2.5 text-xs sm:text-sm text-neutral-700">

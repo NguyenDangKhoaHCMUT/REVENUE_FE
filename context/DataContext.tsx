@@ -11,6 +11,7 @@ import { authService } from '@/services/auth.service';
 import { metricsService, buildEmptyWeekMetrics } from '@/services/metrics.service';
 import { getWeekRanges } from '@/lib/utils';
 import { eventsService } from '@/services/events.service';
+import { toast } from 'react-toastify';
 
 interface DataContextType {
   metrics: DailyMetricData[];
@@ -149,6 +150,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         // If unauthorized (401), clear invalid token
         if (err && typeof err === 'object' && 'statusCode' in err && err.statusCode === 401) {
           logout();
+          toast.warning('Your session has expired. Please sign in again.', {
+            toastId: 'session-expired',
+          });
         }
       });
   }, []);

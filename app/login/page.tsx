@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useData } from '@/context/DataContext';
 import { Navbar } from '@/components/Navbar';
-import { Lock, Mail, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,24 +13,23 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('admin@example.com');
   const [password, setPassword] = useState('Admin@12345');
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // If already logged in, show notice or redirect
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setIsLoading(true);
 
     try {
       const res = await login(email, password);
       if (res.success) {
+        toast.success('Signed in successfully.');
         router.push('/admin');
       } else {
-        setError(res.error || 'Login failed');
+        toast.error(res.error || 'Login failed');
       }
     } catch {
-      setError('An error occurred, please try again');
+      toast.error('An error occurred, please try again');
     } finally {
       setIsLoading(false);
     }
@@ -55,14 +55,6 @@ export default function LoginPage() {
                 Authenticate as an administrator to manage metrics
               </p>
             </div>
-
-            {/* Error banner */}
-            {error && (
-              <div className="mb-6 p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-2.5 text-xs text-rose-700">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
 
             {/* Already authenticated banner */}
             {isAuthenticated && (

@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '@/context/DataContext';
 import { RevenueChart } from '@/components/RevenueChart';
 import { Navbar } from '@/components/Navbar';
 import {
   BarChart2,
   Download,
+  LoaderCircle,
 } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { exportDashboardPng, revenueExportFilename } from '@/lib/export-dashboard';
 
 export default function DashboardPage() {
   const { metrics, isLoadingData, dataError, refreshData } = useData();
@@ -17,6 +20,9 @@ export default function DashboardPage() {
   const [showPos, setShowPos] = useState(true);
   const [showEatclub, setShowEatclub] = useState(true);
   const [showLabour, setShowLabour] = useState(true);
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const exportInProgress = useRef(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Calculations
   const stats = useMemo(() => {
@@ -60,8 +66,19 @@ export default function DashboardPage() {
     };
   }, [metrics, showPos, showEatclub]);
 
-  const handleExportPNG = () => {
-    window.print();
+  const handleExportPNG = async () => {
+    if (!dashboardRef.current || exportInProgress.current) return;
+    exportInProgress.current = true;
+    setIsExporting(true);
+    try {
+      await exportDashboardPng(dashboardRef.current, revenueExportFilename(metrics.map((day) => day.dateStr), isCompareMode));
+      toast.success('PNG downloaded successfully');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Unable to export PNG. Please try again.');
+    } finally {
+      exportInProgress.current = false;
+      setIsExporting(false);
+    }
   };
 
   if (isLoadingData || dataError) {
@@ -92,7 +109,7 @@ export default function DashboardPage() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
         {/* Main Dashboard Card */}
-        <div className="bg-white rounded-3xl p-5 sm:p-7 md:p-8 border border-neutral-200/70 shadow-xs transition-all overflow-hidden">
+        <div ref={dashboardRef} className="bg-white rounded-3xl p-5 sm:p-7 md:p-8 border border-neutral-200/70 shadow-xs transition-all overflow-hidden">
           {/* Top Bar: Title, Series Checkboxes, Action Buttons */}
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-6 border-b border-neutral-100">
             {/* Title */}
@@ -117,6 +134,7 @@ export default function DashboardPage() {
                   <input
                     type="checkbox"
                     checked={showPos}
+                    disabled={isExporting}
                     onChange={(e) => setShowPos(e.target.checked)}
                     className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-0 cursor-pointer accent-neutral-900"
                   />
@@ -129,6 +147,7 @@ export default function DashboardPage() {
                   <input
                     type="checkbox"
                     checked={showEatclub}
+                    disabled={isExporting}
                     onChange={(e) => setShowEatclub(e.target.checked)}
                     className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-0 cursor-pointer accent-[#5252E6]"
                   />
@@ -141,6 +160,7 @@ export default function DashboardPage() {
                   <input
                     type="checkbox"
                     checked={showLabour}
+                    disabled={isExporting}
                     onChange={(e) => setShowLabour(e.target.checked)}
                     className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-0 cursor-pointer accent-[#EA580C]"
                   />
@@ -150,11 +170,12 @@ export default function DashboardPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2.5 shrink-0">
+              <div data-export-ignore className="flex items-center gap-2.5 shrink-0">
                 {/* Compare to Previous Button */}
                 <button
                   type="button"
                   onClick={() => setIsCompareMode((prev) => !prev)}
+                  disabled={isExporting}
                   className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer ${
                     isCompareMode
                       ? 'bg-neutral-900 text-white hover:bg-neutral-800'
@@ -169,10 +190,12 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={handleExportPNG}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 transition-colors shadow-xs cursor-pointer"
+                  disabled={isExporting}
+                  aria-busy={isExporting}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 transition-colors shadow-xs cursor-pointer disabled:cursor-wait disabled:opacity-60"
                 >
-                  <Download className="w-4 h-4 text-neutral-600" />
-                  <span>Export PNG</span>
+                  {isExporting ? <LoaderCircle className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-neutral-600" />}
+                  <span>{isExporting ? 'Exporting…' : 'Export PNG'}</span>
                 </button>
               </div>
             </div>

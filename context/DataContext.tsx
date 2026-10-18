@@ -13,11 +13,12 @@ import { getWeekRanges } from '@/lib/utils';
 import { eventsService } from '@/services/events.service';
 import { toast } from 'react-toastify';
 import { buildPeriodMetrics, mergePeriodMetrics, type MetricPeriod } from '@/lib/metric-period';
+import { buildEventBatch, mergeEventBatch } from '@/lib/event-batch';
 
 interface DataContextType {
   metrics: DailyMetricData[];
   updateMetric: (id: string, updated: Partial<DailyMetricData>) => void;
-  saveAllMetricsAndEvents: (data: DailyMetricData[]) => Promise<{ success: boolean; error?: string }>;
+  saveEvents: (data: DailyMetricData[]) => Promise<{ success: boolean; error?: string }>;
   saveMetricsPeriod: (data: DailyMetricData[], period: MetricPeriod) => Promise<{ success: boolean; error?: string }>;
   refreshData: () => Promise<void>;
   isLoadingData: boolean;
@@ -41,10 +42,6 @@ function blankFields(metric?: DailyMetric): MetricPayloadField[] {
   if (!metric) return [];
   return PAYLOAD_FIELDS.filter((f) => metric[f] === null || metric[f] === undefined);
 }
-
-/** Number >= 0, or null when the cell is blank */
-const orNull = (blank: boolean, value: number, round = false): number | null =>
-  blank ? null : Math.max(round ? Math.round(value) : value, 0) || 0;
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   // Date-free placeholder so SSR/prerender and first client render match.
@@ -185,7 +182,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const saveAllMetricsAndEvents = async (
+  const saveEvents = async (
     data: DailyMetricData[]
   ): Promise<{ success: boolean; error?: string }> => {
     const token = user?.token;
@@ -194,103 +191,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const updatedList = [...data];
-      const { previous } = getWeekRanges();
-
-      for (let i = 0; i < updatedList.length; i++) {
-        const item = updatedList[i];
-        if (!item.dateStr) continue;
-
-        const existing = metrics.find((m) => m.id === item.id);
-        const isBlank = (f: MetricPayloadField) =>
-          item.blankCurrent?.includes(f) ?? false;
-        const isPrevBlank = (f: MetricPayloadField) =>
-          item.blankPrevious?.includes(f) ?? false;
-
-        // 1. Current week: upsert if the day has data, delete if it was emptied
-        if (item.hasCurrentData) {
-          await metricsService.upsertMetric(
-            item.dateStr,
-            {
-              posRevenue: orNull(isBlank('posRevenue'), Number(item.posRevenue)),
-              eatclubRevenue: orNull(isBlank('eatclubRevenue'), Number(item.eatclubRevenue)),
-              labourCost: orNull(isBlank('labourCost'), Number(item.labourCost)),
-              covers: orNull(isBlank('covers'), Number(item.covers), true),
-            },
-            token
-          );
-        } else if (existing?.hasCurrentData) {
-          await metricsService.deleteMetric(item.dateStr, token);
-        }
-
-        // 1b. Same weekday of the previous week (Previous Period)
-        const prevDate = previous.dates[i];
-        if (prevDate) {
-          if (item.hasPreviousData) {
-            const prevDirect = Math.max(Number(item.previousDirectRevenue) || 0, 0);
-            const prevTotal = Math.max(Number(item.previousTotalRevenue) || 0, 0);
-            await metricsService.upsertMetric(
-              prevDate,
-              {
-                posRevenue: orNull(isPrevBlank('posRevenue'), prevDirect),
-                // total = direct (POS) + eatclub, so eatclub is the remainder
-                eatclubRevenue: orNull(
-                  isPrevBlank('eatclubRevenue'),
-                  prevTotal - prevDirect
-                ),
-                labourCost: orNull(
-                  isPrevBlank('labourCost'),
-                  Number(item.previousLabourCost)
-                ),
-                covers: orNull(isPrevBlank('covers'), Number(item.previousCovers), true),
-              },
-              token
-            );
-          } else if (existing?.hasPreviousData) {
-            await metricsService.deleteMetric(prevDate, token);
-          }
-        }
-
-        // 2. Synchronize event to backend
-        if (
-          item.eventImpact &&
-          (item.eventImpact === 'positive' || item.eventImpact === 'negative')
-        ) {
-          if (item.eventId) {
-            await eventsService.updateEvent(
-              item.eventId,
-              {
-                impact: item.eventImpact,
-                description: item.eventDescription?.trim() || '',
-              },
-              token
-            );
-          } else {
-            const newEvent = await eventsService.createEvent(
-              {
-                date: item.dateStr,
-                impact: item.eventImpact,
-                description: item.eventDescription?.trim() || '',
-              },
-              token
-            );
-            updatedList[i] = {
-              ...item,
-              eventId: newEvent.id,
-            };
-          }
-        } else if (item.eventImpact === null && item.eventId) {
-          await eventsService.deleteEvent(item.eventId, token);
-          updatedList[i] = {
-            ...item,
-            eventId: undefined,
-            eventDescription: undefined,
-          };
-        }
-      }
-
-      setMetrics(updatedList);
-      metricsService.saveMetrics(updatedList);
+      const payload = buildEventBatch(data);
+      const saved = await eventsService.upsertBatch(payload, token);
+      setMetrics((existing) => {
+        const updated = mergeEventBatch(existing, payload, saved);
+        metricsService.saveMetrics(updated);
+        return updated;
+      });
       return { success: true };
     } catch (err: unknown) {
       const message =
@@ -329,7 +236,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       value={{
         metrics,
         updateMetric,
-        saveAllMetricsAndEvents,
+        saveEvents,
         saveMetricsPeriod,
         refreshData,
         isLoadingData,

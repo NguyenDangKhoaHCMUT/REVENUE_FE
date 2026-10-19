@@ -55,3 +55,14 @@ export function calculateRevenueStats(
     coversDiffPct: differencePercent(totalCovers, prevTotalCovers),
   };
 }
+
+export function getDifferenceColor(roundedPercentage: string) {
+  return Number(roundedPercentage) < 0 ? 'text-rose-600' : 'text-emerald-600';
+}
+
+export function formatDifferencePercent(roundedPercentage: string) {
+  const value = Number(roundedPercentage);
+  const displayValue = value === 0 ? '0.0' : roundedPercentage;
+
+  return `${value >= 0 ? '+' : ''}${displayValue}%`;
+}

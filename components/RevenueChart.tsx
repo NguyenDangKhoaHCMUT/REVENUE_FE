@@ -2,8 +2,9 @@
 
 import { DailyMetricData } from '@/types/metrics';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { RevenueTooltip } from './RevenueTooltip';
+import { calculateRevenueChartLayout, REVENUE_CHART_HEIGHT } from '@/lib/revenue-chart';
 
 interface RevenueChartProps {
   metrics: DailyMetricData[];
@@ -23,21 +24,18 @@ export function RevenueChart({
   const tooltipId = useId();
   const [active, setActive] = useState<{ id: string; anchor: HTMLElement; touch: boolean } | null>(null);
   const activeDay = active ? metrics.find((day) => day.id === active.id) : undefined;
-  const maxScale = 3000;
-  const yAxisTicks = [
-    { label: '3k', pct: 100 },
-    { label: '2.25k', pct: 75 },
-    { label: '1.5k', pct: 50 },
-    { label: '0.75k', pct: 25 },
-    { label: '0k', pct: 0 },
-  ];
+  const { yAxisTicks, columns } = useMemo(
+    () => calculateRevenueChartLayout(metrics, { isCompareMode, showPos, showEatclub, showLabour }),
+    [metrics, isCompareMode, showPos, showEatclub, showLabour],
+  );
+  const axisWidth = Math.max(48, ...yAxisTicks.map((tick) => tick.label.length * 7 + 12));
 
   return (
     <div className="w-full mt-6 select-none">
       {/* Chart Canvas Area */}
-      <div className="relative w-full h-[300px] flex">
+      <div className="relative w-full flex" style={{ height: REVENUE_CHART_HEIGHT }}>
         {/* Y Axis Labels */}
-        <div className="w-10 sm:w-12 h-full relative text-xs text-neutral-400 font-medium select-none shrink-0">
+        <div style={{ width: axisWidth }} className="h-full relative text-xs text-neutral-400 font-medium select-none shrink-0">
           {yAxisTicks.map((tick) => (
             <span
               key={tick.label}
@@ -64,32 +62,9 @@ export function RevenueChart({
 
           {/* 7 Columns for Days */}
           <div className="relative h-full flex justify-between items-end px-1 sm:px-4 md:px-6">
-            {metrics.map((day) => {
-              // Percentage calculation (clamped to 100%)
-              const posPct = showPos
-                ? Math.min(100, (day.posRevenue / maxScale) * 100)
-                : 0;
-              const eatclubPct = showEatclub
-                ? Math.min(100, (day.eatclubRevenue / maxScale) * 100)
-                : 0;
-              const labourPct = showLabour
-                ? Math.min(100, (day.labourCost / maxScale) * 100)
-                : 0;
-
-              // Previous period calculations
-              const prevDirectPct = showPos
-                ? Math.min(100, (day.previousDirectRevenue / maxScale) * 100)
-                : 0;
-              const prevEatclubPortion = Math.max(
-                0,
-                day.previousTotalRevenue - day.previousDirectRevenue
-              );
-              const prevEatclubPct = showEatclub
-                ? Math.min(100, (prevEatclubPortion / maxScale) * 100)
-                : 0;
-              const prevLabourPct = showLabour
-                ? Math.min(100, (day.previousLabourCost / maxScale) * 100)
-                : 0;
+            {metrics.map((day, index) => {
+              const { posPct, eatclubPct, labourPct, prevDirectPct, prevEatclubPct,
+                prevLabourPct, badgeBottomPct } = columns[index];
 
               return (
                 <div
@@ -128,7 +103,7 @@ export function RevenueChart({
                   {day.eventImpact === 'negative' && (
                     <div
                       style={{
-                        bottom: `${Math.max(posPct + eatclubPct, labourPct) + 5}%`,
+                        bottom: `${badgeBottomPct}%`,
                       }}
                       className="absolute z-10 flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-rose-50 border border-rose-200 text-rose-500 shadow-xs cursor-pointer transition-transform hover:scale-110 pointer-events-auto"
                       title={day.eventDescription || 'Negative Event Impact'}
@@ -140,7 +115,7 @@ export function RevenueChart({
                   {day.eventImpact === 'positive' && (
                     <div
                       style={{
-                        bottom: `${Math.max(posPct + eatclubPct, labourPct) + 5}%`,
+                        bottom: `${badgeBottomPct}%`,
                       }}
                       className="absolute z-10 flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-500 shadow-xs cursor-pointer transition-transform hover:scale-110 pointer-events-auto"
                       title={day.eventDescription || 'Positive Event Impact'}
@@ -261,7 +236,7 @@ export function RevenueChart({
       </div>
 
       {/* X Axis Labels */}
-      <div className="flex ml-10 sm:ml-12 px-1 sm:px-4 md:px-6 pt-3 text-xs sm:text-sm font-medium text-neutral-500 justify-between">
+      <div style={{ marginLeft: axisWidth }} className="flex px-1 sm:px-4 md:px-6 pt-3 text-xs sm:text-sm font-medium text-neutral-500 justify-between">
         {metrics.map((day) => (
           <div key={day.id} className="flex-1 text-center">
             {day.day}

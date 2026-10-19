@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { exportDashboardPng, revenueExportFilename } from '@/lib/export-dashboard';
-import { calculateRevenueStats } from '@/lib/revenue-stats';
+import { calculateRevenueStats, formatDifferencePercent, getDifferenceColor } from '@/lib/revenue-stats';
 
 export default function DashboardPage() {
   const { metrics, isLoadingData, dataError, refreshData } = useData();
@@ -180,9 +180,8 @@ export default function DashboardPage() {
                 {isCompareMode && (
                   <span className="text-xs sm:text-sm font-medium text-neutral-500">
                     vs ${stats.prevTotalRevenue.toLocaleString()}{' '}
-                    <span className="text-emerald-600 font-semibold">
-                      ({Number(stats.revDiffPct) >= 0 ? '+' : ''}
-                      {stats.revDiffPct}%)
+                    <span className={`font-semibold ${getDifferenceColor(stats.revDiffPct)}`}>
+                      ({formatDifferencePercent(stats.revDiffPct)})
                     </span>
                   </span>
                 )}
@@ -201,9 +200,8 @@ export default function DashboardPage() {
                 {isCompareMode && (
                   <span className="text-xs sm:text-sm font-medium text-neutral-500">
                     vs ${stats.prevAvgPerDay.toLocaleString()}{' '}
-                    <span className="text-emerald-600 font-semibold">
-                      ({Number(stats.avgDiffPct) >= 0 ? '+' : ''}
-                      {stats.avgDiffPct}%)
+                    <span className={`font-semibold ${getDifferenceColor(stats.avgDiffPct)}`}>
+                      ({formatDifferencePercent(stats.avgDiffPct)})
                     </span>
                   </span>
                 )}
@@ -222,9 +220,8 @@ export default function DashboardPage() {
                 {isCompareMode && (
                   <span className="text-xs sm:text-sm font-medium text-neutral-500">
                     vs {stats.prevTotalCovers.toLocaleString()}{' '}
-                    <span className="text-emerald-600 font-semibold">
-                      ({Number(stats.coversDiffPct) >= 0 ? '+' : ''}
-                      {stats.coversDiffPct}%)
+                    <span className={`font-semibold ${getDifferenceColor(stats.coversDiffPct)}`}>
+                      ({formatDifferencePercent(stats.coversDiffPct)})
                     </span>
                   </span>
                 )}

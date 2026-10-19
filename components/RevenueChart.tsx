@@ -22,6 +22,7 @@ export function RevenueChart({
   showLabour,
 }: RevenueChartProps) {
   const tooltipId = useId();
+  const tooltipEnabled = showPos || showEatclub || showLabour;
   const [active, setActive] = useState<{ id: string; anchor: HTMLElement; touch: boolean } | null>(null);
   const activeDay = active ? metrics.find((day) => day.id === active.id) : undefined;
   const { yAxisTicks, columns } = useMemo(
@@ -82,28 +83,30 @@ export function RevenueChart({
                   role="button"
                   tabIndex={0}
                   aria-label={`${day.day}${day.dateStr ? ` ${day.dateStr}` : ''} revenue details`}
-                  aria-describedby={active?.id === day.id ? tooltipId : undefined}
-                  aria-expanded={active?.id === day.id}
+                  aria-describedby={tooltipEnabled && active?.id === day.id ? tooltipId : undefined}
+                  aria-expanded={tooltipEnabled && active?.id === day.id}
+                  aria-disabled={!tooltipEnabled}
                   className="min-w-0 flex-1 flex flex-col items-center h-full justify-end relative px-1 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
                   onPointerEnter={(event) => {
-                    if (event.pointerType === 'mouse') setActive({ id: day.id, anchor: event.currentTarget, touch: false });
+                    if (tooltipEnabled && event.pointerType === 'mouse') setActive({ id: day.id, anchor: event.currentTarget, touch: false });
                   }}
                   onPointerLeave={(event) => {
                     if (event.pointerType === 'mouse') setActive((current) => current?.id === day.id ? null : current);
                   }}
                   onPointerUp={(event) => {
-                    if (event.pointerType !== 'mouse') {
+                    if (tooltipEnabled && event.pointerType !== 'mouse') {
                       const anchor = event.currentTarget;
                       setActive((current) => current?.id === day.id ? null : { id: day.id, anchor, touch: true });
                     }
                   }}
                   onFocus={(event) => {
-                    if (event.currentTarget.matches(':focus-visible')) setActive({ id: day.id, anchor: event.currentTarget, touch: false });
+                    if (tooltipEnabled && event.currentTarget.matches(':focus-visible')) setActive({ id: day.id, anchor: event.currentTarget, touch: false });
                   }}
                   onBlur={() => setActive((current) => current?.id === day.id ? null : current)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
+                      if (!tooltipEnabled) return;
                       const anchor = event.currentTarget;
                       setActive((current) => current?.id === day.id ? null : { id: day.id, anchor, touch: false });
                     }
@@ -260,12 +263,15 @@ export function RevenueChart({
         Scroll horizontally to view all days
       </p>
 
-      {active && activeDay && (
+      {tooltipEnabled && active && activeDay && (
         <RevenueTooltip
           id={tooltipId}
           day={activeDay}
           anchor={active.anchor}
           isCompareMode={isCompareMode}
+          showPos={showPos}
+          showEatclub={showEatclub}
+          showLabour={showLabour}
           touch={active.touch}
           onClose={() => setActive(null)}
         />

@@ -6,7 +6,17 @@ const SERIES = [
   { field: 'labourCost', label: 'Labour Costs' },
 ] as const;
 
-export function getRevenueTooltipRows(day: DailyMetricData, previous = false) {
+export interface RevenueTooltipFilters {
+  showPos: boolean;
+  showEatclub: boolean;
+  showLabour: boolean;
+}
+
+export function getRevenueTooltipRows(
+  day: DailyMetricData,
+  previous = false,
+  filters: RevenueTooltipFilters = { showPos: true, showEatclub: true, showLabour: true },
+) {
   // Previous total is POS + Eatclub in DataContext. The DB stores money with
   // scale 2; round the subtraction to avoid floating-point display artifacts.
   const values = previous
@@ -16,12 +26,17 @@ export function getRevenueTooltipRows(day: DailyMetricData, previous = false) {
     : [day.posRevenue, day.eatclubRevenue, day.labourCost];
   const hasData = previous ? day.hasPreviousData : day.hasCurrentData;
   const blanks: MetricPayloadField[] = (previous ? day.blankPrevious : day.blankCurrent) ?? [];
+  const visible = {
+    posRevenue: filters.showPos,
+    eatclubRevenue: filters.showEatclub,
+    labourCost: filters.showLabour,
+  };
   return SERIES.map(({ field, label }, index) => ({
     field,
     label,
     value: hasData === true && !blanks.includes(field) && Number.isFinite(values[index])
       ? values[index] : null,
-  }));
+  })).filter(({ field }) => visible[field]);
 }
 
 const money = new Intl.NumberFormat('en-US', {

@@ -13,15 +13,3 @@ export interface EventItem {
   description?: string | null;
   createdAt?: string;
 }
-
-export interface CreateEventPayload {
-  date: string;
-  impact: EventImpactType;
-  description?: string;
-}
-
-export interface UpdateEventPayload {
-  date?: string;
-  impact?: EventImpactType;
-  description?: string;
-}

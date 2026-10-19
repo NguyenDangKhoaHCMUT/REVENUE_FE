@@ -1,9 +1,5 @@
 import { apiClient } from './api-client';
-import {
-  DailyMetric,
-  DailyMetricData,
-  UpsertDailyMetricPayload,
-} from '@/types';
+import type { DailyMetricData } from '@/types';
 import { getWeekRanges } from '@/lib/utils';
 import type { PeriodMetricPayload } from '@/lib/metric-period';
 
@@ -49,48 +45,6 @@ export const metricsService = {
       method: 'PUT',
       token,
       body: JSON.stringify({ metrics }),
-    });
-  },
-
-  /**
-   * Fetch metrics from backend API
-   */
-  async getMetrics(
-    params?: { from?: string; to?: string },
-    token?: string
-  ): Promise<DailyMetric[]> {
-    return apiClient<DailyMetric[]>('/admin/metrics', {
-      method: 'GET',
-      token,
-      params,
-    });
-  },
-
-  /**
-   * Upsert metric for a specific date (YYYY-MM-DD)
-   */
-  async upsertMetric(
-    date: string,
-    payload: UpsertDailyMetricPayload,
-    token?: string
-  ): Promise<DailyMetric> {
-    return apiClient<DailyMetric>(`/admin/metrics/${date}`, {
-      method: 'PUT',
-      token,
-      body: JSON.stringify(payload),
-    });
-  },
-
-  /**
-   * Delete metric for a specific date (YYYY-MM-DD)
-   */
-  async deleteMetric(
-    date: string,
-    token?: string
-  ): Promise<{ message: string }> {
-    return apiClient<{ message: string }>(`/admin/metrics/${date}`, {
-      method: 'DELETE',
-      token,
     });
   },
 

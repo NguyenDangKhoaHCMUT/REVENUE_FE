@@ -29,9 +29,19 @@ export function RevenueChart({
     [metrics, isCompareMode, showPos, showEatclub, showLabour],
   );
   const axisWidth = Math.max(48, ...yAxisTicks.map((tick) => tick.label.length * 7 + 12));
+  const minChartWidth = axisWidth + 48 + metrics.length * (isCompareMode ? 136 : 120);
 
   return (
-    <div className="w-full mt-6 select-none">
+    <div className="w-full min-w-0 mt-6 select-none">
+      <div
+        role="region"
+        aria-label="Weekly revenue chart"
+        tabIndex={0}
+        data-revenue-chart-scroll
+        onScroll={() => setActive(null)}
+        className="w-full min-w-0 overflow-x-auto overscroll-x-contain pb-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+      >
+        <div data-revenue-chart-canvas className="pt-2 pb-1" style={{ minWidth: minChartWidth }}>
       {/* Chart Canvas Area */}
       <div className="relative w-full flex" style={{ height: REVENUE_CHART_HEIGHT }}>
         {/* Y Axis Labels */}
@@ -61,7 +71,7 @@ export function RevenueChart({
           </div>
 
           {/* 7 Columns for Days */}
-          <div className="relative h-full flex justify-between items-end px-1 sm:px-4 md:px-6">
+          <div className="relative h-full flex justify-between items-end px-6">
             {metrics.map((day, index) => {
               const { posPct, eatclubPct, labourPct, prevDirectPct, prevEatclubPct,
                 prevLabourPct, badgeBottomPct } = columns[index];
@@ -74,7 +84,7 @@ export function RevenueChart({
                   aria-label={`${day.day}${day.dateStr ? ` ${day.dateStr}` : ''} revenue details`}
                   aria-describedby={active?.id === day.id ? tooltipId : undefined}
                   aria-expanded={active?.id === day.id}
-                  className="min-w-0 flex-1 flex flex-col items-center h-full justify-end relative px-0.5 sm:px-1 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                  className="min-w-0 flex-1 flex flex-col items-center h-full justify-end relative px-1 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
                   onPointerEnter={(event) => {
                     if (event.pointerType === 'mouse') setActive({ id: day.id, anchor: event.currentTarget, touch: false });
                   }}
@@ -125,17 +135,17 @@ export function RevenueChart({
                   )}
 
                   {/* Bars Container */}
-                  <div className="w-full flex items-end justify-center gap-1 sm:gap-1.5 md:gap-2 h-full">
+                  <div className="w-full flex items-end justify-center gap-2 h-full">
                     {/* --- Group 1: Current Period --- */}
-                    <div className="flex min-w-0 items-end gap-0.5 sm:gap-1 h-full">
+                    <div className="flex shrink-0 items-end gap-1 h-full">
                       {/* Current Stacked Revenue Bar */}
                       {(showPos || showEatclub) && (
                         <div
                           style={{ height: `${posPct + eatclubPct}%` }}
-                          className={`flex flex-col items-center justify-end ${
+                          className={`flex shrink-0 flex-col items-center justify-end ${
                             isCompareMode
-                              ? 'w-3.5 sm:w-5 md:w-6 lg:w-7'
-                              : 'w-7 sm:w-10 md:w-12 lg:w-14'
+                              ? 'w-7'
+                              : 'w-14'
                           } transition-all duration-300`}
                         >
                           {/* Eatclub on top */}
@@ -169,21 +179,21 @@ export function RevenueChart({
                           style={{ height: `${labourPct}%` }}
                           className={`${
                             isCompareMode
-                              ? 'w-2.5 sm:w-4 md:w-5 lg:w-6'
-                              : 'w-6 sm:w-8 md:w-10 lg:w-11'
-                          } bg-[#EA580C] rounded-t-sm sm:rounded-t-md transition-all duration-300`}
+                              ? 'w-6'
+                              : 'w-11'
+                          } shrink-0 bg-[#EA580C] rounded-t-sm sm:rounded-t-md transition-all duration-300`}
                         />
                       )}
                     </div>
 
                     {/* --- Group 2: Previous Period (Compare Mode Only) --- */}
                     {isCompareMode && (
-                      <div className="flex min-w-0 items-end gap-0.5 sm:gap-1 h-full">
+                      <div className="flex shrink-0 items-end gap-1 h-full">
                         {/* Previous Stacked Revenue Bar */}
                         {(showPos || showEatclub) && (
                           <div
                             style={{ height: `${prevDirectPct + prevEatclubPct}%` }}
-                            className="flex flex-col items-center justify-end w-3.5 sm:w-5 md:w-6 lg:w-7 transition-all duration-300"
+                            className="flex shrink-0 flex-col items-center justify-end w-7 transition-all duration-300"
                           >
                             {/* Prev Eatclub Portion */}
                             {showEatclub && prevEatclubPct > 0 && (
@@ -222,7 +232,7 @@ export function RevenueChart({
                         {showLabour && prevLabourPct > 0 && (
                           <div
                             style={{ height: `${prevLabourPct}%` }}
-                            className="w-2.5 sm:w-4 md:w-5 lg:w-6 bg-[#FED7AA] rounded-t-sm sm:rounded-t-md transition-all duration-300"
+                            className="w-6 shrink-0 bg-[#FED7AA] rounded-t-sm sm:rounded-t-md transition-all duration-300"
                           />
                         )}
                       </div>
@@ -236,13 +246,19 @@ export function RevenueChart({
       </div>
 
       {/* X Axis Labels */}
-      <div style={{ marginLeft: axisWidth }} className="flex px-1 sm:px-4 md:px-6 pt-3 text-xs sm:text-sm font-medium text-neutral-500 justify-between">
+      <div style={{ marginLeft: axisWidth }} className="flex px-6 pt-3 text-sm font-medium text-neutral-500 justify-between">
         {metrics.map((day) => (
           <div key={day.id} className="flex-1 text-center">
             {day.day}
           </div>
         ))}
       </div>
+        </div>
+      </div>
+
+      <p data-export-ignore className="mt-2 text-center text-xs text-neutral-400 xl:hidden">
+        Scroll horizontally to view all days
+      </p>
 
       {active && activeDay && (
         <RevenueTooltip

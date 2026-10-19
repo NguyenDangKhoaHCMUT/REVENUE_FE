@@ -72,9 +72,9 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#F4F5F7] flex flex-col">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+      <main className="flex-1 min-w-0 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
         {/* Main Dashboard Card */}
-        <div ref={dashboardRef} className="bg-white rounded-3xl p-5 sm:p-7 md:p-8 border border-neutral-200/70 shadow-xs transition-all overflow-hidden">
+        <div ref={dashboardRef} className="min-w-0 bg-white rounded-3xl p-5 sm:p-7 md:p-8 border border-neutral-200/70 shadow-xs transition-all overflow-hidden">
           {/* Top Bar: Title, Series Checkboxes, Action Buttons */}
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-6 border-b border-neutral-100">
             {/* Title */}
@@ -135,7 +135,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Action Buttons */}
-              <div data-export-ignore className="flex items-center gap-2.5 shrink-0">
+              <div data-export-ignore className="flex min-w-0 flex-wrap items-center gap-2.5">
                 {/* Compare to Previous Button */}
                 <button
                   type="button"

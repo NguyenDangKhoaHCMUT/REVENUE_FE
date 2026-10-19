@@ -16,21 +16,36 @@ export async function exportDashboardPng(node: HTMLElement, filename: string): P
   await Promise.allSettled(animations.map((animation) => animation.finished));
   if (!node.isConnected) throw new Error('The dashboard is no longer visible. Please try again.');
 
-  // SVG serialization reads the checked attribute, while controlled React inputs
-  // update the checked property. Synchronize defaults only during capture so
-  // unchecked filters do not appear checked in the exported image.
+  // Expand an off-screen copy so mobile exports include every day without
+  // changing the visible dashboard or its horizontal scroll position.
+  const chart = node.querySelector<HTMLElement>('[data-revenue-chart-canvas]');
+  const styles = getComputedStyle(node);
+  const frameWidth = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight)
+    + node.offsetWidth - node.clientWidth;
+  const width = Math.ceil(Math.max(node.offsetWidth, (chart?.scrollWidth ?? 0) + frameWidth));
+  const capture = node.cloneNode(true) as HTMLElement;
+  capture.setAttribute('aria-hidden', 'true');
+  capture.setAttribute('inert', '');
+  Object.assign(capture.style, {
+    position: 'fixed', left: '-100000px', top: '0', width: `${width}px`,
+    maxWidth: 'none', height: 'auto', margin: '0', pointerEvents: 'none',
+  });
   const checkboxes = Array.from(node.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
-  const defaults = checkboxes.map((input) => input.defaultChecked);
+  capture.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input, index) => {
+    input.checked = checkboxes[index].checked;
+    input.defaultChecked = input.checked;
+  });
   let blob: Blob | null;
   try {
-    checkboxes.forEach((input) => { input.defaultChecked = input.checked; });
-    blob = await toBlob(node, {
+    document.body.appendChild(capture);
+    blob = await toBlob(capture, {
       backgroundColor: '#ffffff',
       pixelRatio: 2,
+      style: { position: 'static', left: 'auto', top: 'auto', pointerEvents: 'none' },
       filter: (element) => !element.hasAttribute?.('data-export-ignore'),
     });
   } finally {
-    checkboxes.forEach((input, index) => { input.defaultChecked = defaults[index]; });
+    capture.remove();
   }
   if (!blob || blob.type !== 'image/png' || blob.size === 0) {
     throw new Error('Unable to create the PNG image. Please try again.');

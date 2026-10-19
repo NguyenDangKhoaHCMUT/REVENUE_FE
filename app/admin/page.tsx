@@ -242,7 +242,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-[#F4F5F7] flex flex-col">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+      <main className="flex-1 min-w-0 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
         {isLoadingData && <p role="status" className="text-sm text-neutral-600">Loading the latest data…</p>}
         {dataError && !isLoadingData && (
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
@@ -252,10 +252,10 @@ export default function AdminPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 border-b border-neutral-200 pb-2">
+        <div className="flex flex-wrap items-center gap-2 border-b border-neutral-200 pb-2">
           <button
             onClick={() => setActiveTab('current')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
               activeTab === 'current'
                 ? 'bg-neutral-900 text-white'
                 : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
@@ -267,7 +267,7 @@ export default function AdminPage() {
 
           <button
             onClick={() => setActiveTab('previous')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
               activeTab === 'previous'
                 ? 'bg-neutral-900 text-white'
                 : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
@@ -279,7 +279,7 @@ export default function AdminPage() {
 
           <button
             onClick={() => setActiveTab('events')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
               activeTab === 'events'
                 ? 'bg-neutral-900 text-white'
                 : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
@@ -292,8 +292,8 @@ export default function AdminPage() {
 
         {/* Tab 1: Current Period */}
         {activeTab === 'current' && (
-          <div className="bg-white rounded-3xl p-6 border border-neutral-200/80 shadow-xs overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse min-w-[700px]">
+          <div className="min-w-0 bg-white rounded-3xl p-4 sm:p-6 border border-neutral-200/80 shadow-xs overflow-x-auto">
+            <table className="w-full whitespace-nowrap text-left text-sm border-collapse min-w-[700px]">
               <thead>
                 <tr className="border-b border-neutral-200 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                   <th className="py-3 px-3">Day</th>
@@ -332,8 +332,8 @@ export default function AdminPage() {
 
         {/* Tab 2: Previous Period */}
         {activeTab === 'previous' && (
-          <div className="bg-white rounded-3xl p-6 border border-neutral-200/80 shadow-xs overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse min-w-[650px]">
+          <div className="min-w-0 bg-white rounded-3xl p-4 sm:p-6 border border-neutral-200/80 shadow-xs overflow-x-auto">
+            <table className="w-full whitespace-nowrap text-left text-sm border-collapse min-w-[650px]">
               <thead>
                 <tr className="border-b border-neutral-200 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                   <th className="py-3 px-3">Day</th>
@@ -365,7 +365,7 @@ export default function AdminPage() {
 
         {/* Tab 3: Events Impact */}
         {activeTab === 'events' && (
-          <div className="bg-white rounded-3xl p-6 border border-neutral-200/80 shadow-xs">
+          <div className="min-w-0 bg-white rounded-3xl p-4 sm:p-6 border border-neutral-200/80 shadow-xs">
             <div className="mb-4">
               <h3 className="text-base font-bold text-neutral-900">
                 Configure Event Impact Badges
@@ -378,7 +378,7 @@ export default function AdminPage() {
                   key={row.id}
                   className="p-4 rounded-2xl border border-neutral-200 bg-neutral-50/50 flex flex-col gap-3"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <span className="font-bold text-sm text-neutral-900">
                         {row.day}
@@ -388,7 +388,7 @@ export default function AdminPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => handleChange(row.id, 'eventImpact', null)}

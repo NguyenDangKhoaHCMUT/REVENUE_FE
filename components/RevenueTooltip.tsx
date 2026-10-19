@@ -3,9 +3,9 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { DailyMetricData } from '@/types/metrics';
-import { formatTooltipRevenue, getRevenueTooltipRows, positionRevenueTooltip } from '@/lib/revenue-tooltip';
+import { formatTooltipRevenue, getRevenueTooltipRows, positionRevenueTooltip, type RevenueTooltipFilters } from '@/lib/revenue-tooltip';
 
-interface RevenueTooltipProps {
+interface RevenueTooltipProps extends RevenueTooltipFilters {
   id: string;
   day: DailyMetricData;
   anchor: HTMLElement;
@@ -14,7 +14,7 @@ interface RevenueTooltipProps {
   onClose: () => void;
 }
 
-export function RevenueTooltip({ id, day, anchor, isCompareMode, touch, onClose }: RevenueTooltipProps) {
+export function RevenueTooltip({ id, day, anchor, isCompareMode, showPos, showEatclub, showLabour, touch, onClose }: RevenueTooltipProps) {
   const popup = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -42,7 +42,7 @@ export function RevenueTooltip({ id, day, anchor, isCompareMode, touch, onClose 
       window.removeEventListener('scroll', reposition, true);
       observer.disconnect();
     };
-  }, [anchor, day, isCompareMode]);
+  }, [anchor, day, isCompareMode, showPos, showEatclub, showLabour]);
 
   useEffect(() => {
     const dismissOutside = (event: PointerEvent) => {
@@ -67,7 +67,7 @@ export function RevenueTooltip({ id, day, anchor, isCompareMode, touch, onClose 
         </h3>
       )}
       <dl className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-0.5 text-[11px] leading-4">
-        {getRevenueTooltipRows(day, previous).map((row) => (
+        {getRevenueTooltipRows(day, previous, { showPos, showEatclub, showLabour }).map((row) => (
           <div key={row.field} className="contents">
             <dt className={row.field === 'eatclubRevenue' ? 'text-indigo-300' : row.field === 'labourCost' ? 'text-orange-300' : 'text-neutral-200'}>
               {row.label}
